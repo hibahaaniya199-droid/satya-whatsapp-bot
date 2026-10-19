@@ -1,0 +1,14 @@
+{
+  "name": "satya-whatsapp-bot",
+  "version": "5.0.0",
+  "main": "satya.js",
+  "scripts": { "start": "node satya.js" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "qrcode-terminal": "^0.12.0",
+    "groq-sdk": "^0.7.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "pino": "^8.0.0"
+  }
+}
