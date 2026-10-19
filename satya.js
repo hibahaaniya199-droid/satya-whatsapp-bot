@@ -1,47 +1,55 @@
 require('dotenv').config();
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const P = require('pino');
-const qrcode = require('qrcode-terminal');
 const Groq = require('groq-sdk');
 
 const GROQ_KEY = process.env.GROQ_API_KEY || process.env.GROQ_API_KEY;
+const PHONE_NUMBER = process.env.PHONE_NUMBER; // Your 【entity-WhatsApp¦canonical_name=WhatsApp】 number like 919876543210
 const groq = GROQ_KEY ? new Groq({ apiKey: GROQ_KEY }) : null;
 
-console.log("SATYA Starting... GROQ exists:", !!GROQ_KEY);
+console.log("SATYA Starting... PHONE:", PHONE_NUMBER);
 
 async function askSatya(text) {
   const low = text.toLowerCase();
   if (low.includes("who created") || low.includes("who made") || low.includes("chatgpt") || low.includes("who are you")) {
     return "I was created by HIBA HAANIYA.F — Founder & CEO of SATYA 🛡️ I am SATYA real-time truth agent.";
   }
-  if (!groq) return "Add GROQ_API_KEY in Railway Variables please — SATYA by HIBA HAANIYA.F";
+  if (!groq) return "Add GROQ_API_KEY in Railway — SATYA by HIBA HAANIYA.F";
   try {
     const chat = await groq.chat.completions.create({
       model: "openai/gpt-oss-20b",
       messages: [
-        { role: "system", content: "You are SATYA by HIBA HAANIYA.F. Real-time truth checker. Verdict first TRUE/FALSE/HALF-TRUE/BREAKING/NOT VERIFIED. Max 4 lines with proof." },
+        { role: "system", content: "You are SATYA by HIBA HAANIYA.F. Real-time truth checker. Verdict first TRUE/FALSE etc. Max 4 lines." },
         { role: "user", content: text }
       ],
-      temperature: 0.2,
       max_tokens: 350
     });
     return chat.choices[0].message.content;
   } catch (e) {
-    console.log("Groq Error:", e.message);
-    return "SATYA busy, try again — by HIBA HAANIYA.F";
+    console.log(e.message);
+    return "Try again bestie — SATYA by HIBA HAANIYA.F";
   }
 }
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth');
-  const sock = makeWASocket({ auth: state, logger: P({ level: 'silent' }) });
+  const sock = makeWASocket({ auth: state, logger: P({ level: 'silent' }), printQRInTerminal: false });
   sock.ev.on('creds.update', saveCreds);
+
+  if (!state.creds.registered && PHONE_NUMBER) {
+    setTimeout(async () => {
+      try {
+        const code = await sock.requestPairingCode(PHONE_NUMBER);
+        console.log("==========================================");
+        console.log("YOUR WHATSAPP PAIRING CODE IS:", code);
+        console.log("Go to WhatsApp > Linked Devices > Link with phone number > Enter this code");
+        console.log("==========================================");
+      } catch (e) { console.log("Pairing code error:", e.message); }
+    }, 3000);
+  }
+
   sock.ev.on('connection.update', async (u) => {
-    const { connection, lastDisconnect, qr } = u;
-    if (qr) {
-      console.log("=== SCAN THIS QR WITH WHATSAPP ===");
-      qrcode.generate(qr, { small: false });
-    }
+    const { connection, lastDisconnect } = u;
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       if (shouldReconnect) startBot();
@@ -49,6 +57,7 @@ async function startBot() {
       console.log('SATYA WHATSAPP CONNECTED ✅');
     }
   });
+
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const m of messages) {
       if (!m.message || m.key.fromMe) continue;
