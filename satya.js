@@ -40,7 +40,7 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = u;
     if (qr) {
       console.log("=== SCAN THIS QR WITH WHATSAPP ===");
-      qrcode.generate(qr, { small: true });
+      qrcode.generate(qr, { small: false });
     }
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
